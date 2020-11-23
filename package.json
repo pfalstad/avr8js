@@ -22,9 +22,9 @@
   ],
   "scripts": {
     "build": "rimraf dist && tsc --sourceMap false && tsc -m commonjs --outDir dist/cjs --sourceMap false",
-    "build:demo": "parcel build demo/src/index.html -d demo/dist",
+    "build:demo": "wmr build --cwd demo/src --out demo/dist",
     "prepare": "npm run build",
-    "start": "parcel demo/src/index.html -d demo/build",
+    "start": "wmr --cwd demo/src",
     "lint": "eslint src/**/*.ts demo/**/*.ts",
     "test": "npm run lint && jest",
     "test:watch": "jest --watch",
@@ -41,7 +41,6 @@
     "@typescript-eslint/eslint-plugin": "^2.34.0",
     "@typescript-eslint/parser": "^2.34.0",
     "@wokwi/elements": "^0.16.2",
-    "acorn": "^7.3.1",
     "eslint": "^6.8.0",
     "eslint-config-prettier": "^6.11.0",
     "eslint-plugin-jest": "^23.18.0",
@@ -50,12 +49,12 @@
     "husky": "^3.0.9",
     "jest": "^26.1.0",
     "lint-staged": "^9.5.0",
-    "parcel-bundler": "^1.12.4",
     "prettier": "^2.0.0",
     "rimraf": "^3.0.2",
     "ts-jest": "^26.1.2",
     "ts-node": "^8.10.2",
-    "typescript": "^3.9.6"
+    "typescript": "^3.9.6",
+    "wmr": "0.0.12"
   },
   "husky": {
     "hooks": {
