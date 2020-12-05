@@ -22,9 +22,9 @@
   ],
   "scripts": {
     "build": "rimraf dist && tsc --sourceMap false && tsc -m commonjs --outDir dist/cjs --sourceMap false",
-    "build:demo": "wmr build --cwd demo/src --out demo/dist",
+    "build:demo": "wmr build --public demo/src --out demo/dist",
     "prepare": "npm run build",
-    "start": "wmr --cwd demo/src",
+    "start": "wmr --public demo/src",
     "lint": "eslint src/**/*.ts demo/**/*.ts",
     "test": "npm run lint && jest",
     "test:watch": "jest --watch",
@@ -54,7 +54,7 @@
     "ts-jest": "^26.1.2",
     "ts-node": "^8.10.2",
     "typescript": "^3.9.6",
-    "wmr": "0.0.12"
+    "wmr": "1.0.0"
   },
   "husky": {
     "hooks": {
