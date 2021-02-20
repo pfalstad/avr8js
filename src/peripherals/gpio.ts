@@ -297,14 +297,15 @@ export class AVRIOPort {
   }
 
   private toggleInterrupt(pin: u8, risingEdge: boolean) {
-    const { externalInterrupts, pinChange } = this.portConfig;
+    const { cpu, portConfig } = this;
+    const { externalInterrupts, pinChange } = portConfig;
     const external = externalInterrupts[pin];
     if (external) {
       const { index, EICRA, EICRB, EIFR, EIMSK, interrupt } = external;
-      if (this.cpu.data[EIMSK] & (1 << index)) {
+      if (cpu.data[EIMSK] & (1 << index)) {
         const configRegister = index >= 4 ? EICRB : EICRA;
         const configShift = (index % 4) * 2;
-        const configuration = (this.cpu.data[configRegister] >> configShift) & 0x3;
+        const configuration = (cpu.data[configRegister] >> configShift) & 0x3;
         let generateInterrupt = false;
         switch (configuration) {
           case 0: // TODO  The low level of INTn generates an interrupt request;
@@ -320,7 +321,7 @@ export class AVRIOPort {
             break;
         }
         if (generateInterrupt) {
-          this.cpu.queueInterrupt({
+          cpu.queueInterrupt({
             address: interrupt,
             flagRegister: EIFR,
             flagMask: 1 << index,
@@ -332,7 +333,16 @@ export class AVRIOPort {
     }
 
     if (pinChange) {
-      // TODO implement pin change interrupts
+      const { PCIE, PCMSK, PCIFR, PCICR, pinChangeInterrupt } = pinChange;
+      if (cpu.data[PCMSK] & (1 << pin)) {
+        cpu.queueInterrupt({
+          address: pinChangeInterrupt,
+          flagRegister: PCIFR,
+          flagMask: 1 << PCIE,
+          enableRegister: PCICR,
+          enableMask: 1 << PCIE,
+        });
+      }
     }
   }
 
