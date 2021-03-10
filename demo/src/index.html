@@ -4,21 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>AVR8js LED Demo</title>
+    <title>AVR8js CircuitJS1 Demo</title>
     <link href="//fonts.googleapis.com/css?family=Roboto&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <h2>AVR8js LED Demo</h2>
-    <iframe id="circuitframe" width=800 height=550 ssrc="../circuitjs.html?startCircuit=lrc.txt"></iframe>
-    <div class="app-container">
-      <div class="leds">
-        <wokwi-led color="green" label="13"></wokwi-led>
-        <wokwi-led color="red" label="12"></wokwi-led>
-      </div>
+    <h2>AVR8js CircuitJS1 Demo</h2>
+    <div style="width:50%;position:fixed;left:0;">
+      <iframe id="circuitFrame" width="95%" height=800 ssrc="../circuitjs.html?startCircuit=lrc.txt&running=false"></iframe>
+    </div>
+    <div style="width:50%;position:fixed;right:0;">
       <div class="toolbar">
         <button id="run-button">Run</button>
         <button id="stop-button" disabled>Stop</button>
-        <button id="revert-button">Back to LEDS example</button>
+        <button id="revert-button">Back to initial example</button>
         <div class="spacer"></div>
         <div id="status-label"></div>
       </div>
@@ -29,6 +27,32 @@
       </div>
     </div>
     <script src="//cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.21.2/min/vs/loader.js"></script>
+    <script>
+window.defaultCode = `
+void setup() {
+  Serial.begin(115200);
+  pinMode(8, OUTPUT);
+  pinMode(9, OUTPUT);
+  pinMode(10, OUTPUT);
+  pinMode(11, OUTPUT);
+  pinMode(12, OUTPUT);
+}
+
+void loop() {
+  int i;
+  for (i = 8; i != 12; i++) {
+    digitalWrite(i, HIGH);
+    delay(50);
+    digitalWrite(i, LOW);
+  }
+  for (i = 12; i != 8; i--) {
+    digitalWrite(i, HIGH);
+    delay(50);
+    digitalWrite(i, LOW);
+  }
+}
+`;
+    </script>
     <script src="./index.ts"></script>
   </body>
 </html>

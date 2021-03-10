@@ -11,6 +11,7 @@ import {
   portCConfig,
   portDConfig,
   usart0Config,
+  PinState
 } from 'avr8js';
 import { loadHex } from './intelhex';
 import { MicroTaskScheduler } from './task-scheduler';
@@ -30,7 +31,6 @@ export class AVRRunner {
   readonly usart: AVRUSART;
   readonly speed = 16e6; // 16 MHZ
   readonly workUnitCycles = 500000;
-  readonly taskScheduler = new MicroTaskScheduler();
 
   constructor(hex: string, sim_) {
     loadHex(hex, new Uint8Array(this.program.buffer));
@@ -43,35 +43,62 @@ export class AVRRunner {
     this.portD = new AVRIOPort(this.cpu, portDConfig);
     this.usart = new AVRUSART(this.cpu, usart0Config, this.speed);
 
-    this.taskScheduler.start();
+    // Simulate analog port (so that analogRead() eventually return)
+    this.cpu.writeHooks[0x7a] = value => {
+      if (value & (1 << 6)) {
+        this.cpu.data[0x7a] = value & ~(1 << 6); // clear bit - conversion done
+        const ADMUXval = this.cpu.data[0x7c];   //Value held in ADMUX selection register
+        const analogPin = ADMUXval & 15;        //Apply mask to clear first 4 bits as only latter half is important for selection
+        this.setAnalogValue(Math.floor(this.sim.getNodeVoltage("A" + analogPin) * 1023/5));
+        return true; // don't update
+      }
+    };
+
     this.sim = sim_;
     this.prevTime = this.sim.getTime();
   }
 
-  // CPU main loop
-  execute(callback: (cpu: CPU) => void) {
-    var timeDiff = this.sim.getTime() - this.prevTime;      //Added by Mark Megarry
-    var cyclesToRun = this.cpu.cycles + timeDiff*this.speed; //Added by Mark Megarry
-    this.getPinStates();
-    while (this.cpu.cycles < cyclesToRun) {
-      avrInstruction(this.cpu);
-      this.cpu.tick();
-    }
-    this.prevTime = this.sim.getTime();
+  setAnalogValue(analogValue: number) {
+    //Write analogValue to ADCH and ADCL
+    this.cpu.data[0x78] = analogValue & 0xff;
+    this.cpu.data[0x79] = (analogValue >> 8) & 0x3;
+  }
 
-    callback(this.cpu);
-    this.taskScheduler.postTask(() => this.execute(callback));
+  // set CPU main loop
+  execute(callback: (cpu: CPU) => void) {
+    var runner = this;
+    this.sim.ontimestep = function () {
+      var timeDiff = runner.sim.getTime() - runner.prevTime;      //Added by Mark Megarry
+      var cyclesToRun = runner.cpu.cycles + timeDiff*runner.speed; //Added by Mark Megarry
+      runner.getPinStates();
+      while (runner.cpu.cycles < cyclesToRun) {
+        avrInstruction(runner.cpu);
+        runner.cpu.tick();
+      }
+      runner.prevTime = runner.sim.getTime();
+
+      callback(runner.cpu);
+    }
   }
 
   getPinStates() {
     var i;
-    for (i = 0; i != 8; i++)
-      this.sim.setExtVoltage("pin " + i, this.portD.pinState(i) ? 5 : 0);
-    for (i = 0; i != 6; i++)
-      this.sim.setExtVoltage("pin " + (i+8), this.portB.pinState(i) ? 5 : 0);
+    for (i = 0; i != 14; i++) {
+      var port = this.portD;
+      var pn = i;
+      if (i >= 8) {
+        port = this.portB;
+        pn = i-8;
+      }
+      var ps = port.pinState(pn);
+      if (ps == PinState.Input)
+        port.setPin(pn, this.sim.getNodeVoltage("pin " + i) > 2.5);
+      else
+        this.sim.setExtVoltage("pin " + i, ps == PinState.High ? 5 : 0);
+    }
   }
 
   stop() {
-    this.taskScheduler.stop();
+    this.sim.ontimestep = null;
   }
 }

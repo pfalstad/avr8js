@@ -34,15 +34,13 @@ window.require.config({
 });
 window.require(['vs/editor/editor.main'], () => {
   editor = monaco.editor.create(document.querySelector('.code-editor'), {
-    value: EditorHistoryUtil.getValue() || BLINK_CODE,
+    value: /*EditorHistoryUtil.getValue() || */ window.defaultCode || BLINK_CODE,
     language: 'cpp',
     minimap: { enabled: false },
   });
 });
 
 // Set up LEDs
-const led13 = document.querySelector<LEDElement>('wokwi-led[color=green]');
-const led12 = document.querySelector<LEDElement>('wokwi-led[color=red]');
 var sim;
 
 // Set up toolbar
@@ -68,13 +66,6 @@ function executeProgram(hex: string) {
 
   runner = new AVRRunner(hex, sim);
 
-  // Hook to PORTB register
-  runner.portB.addListener(() => {
-    led12.value = runner.portB.pinState(4) === PinState.High;
-    led13.value = runner.portB.pinState(5) === PinState.High;
-    sim.setExtVoltage("led12", led12.value ? 5 : 0);
-    sim.setExtVoltage("led13", led13.value ? 5 : 0);
-  });
   runner.usart.onByteTransmit = (value) => {
     serialOutputText.textContent += String.fromCharCode(value);
   };
@@ -88,9 +79,6 @@ function executeProgram(hex: string) {
 }
 
 async function compileAndRun() {
-  led12.value = false;
-  led13.value = false;
-
   storeUserSnippet();
 
   runButton.setAttribute('disabled', '1');
@@ -135,7 +123,7 @@ function stopCode() {
 }
 
 function setBlinkSnippet() {
-  editor.setValue(BLINK_CODE);
+  editor.setValue(window.defaultCode || BLINK_CODE);
   EditorHistoryUtil.storeSnippet(editor.getValue());
 }
 

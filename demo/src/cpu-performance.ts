@@ -17,13 +17,15 @@ export class CPUPerformance {
   update() {
     if (this.prevTime) {
       const delta = performance.now() - this.prevTime;
-      const deltaCycles = this.cpu.cycles - this.prevCycles;
-      const deltaCpuMillis = 1000 * (deltaCycles / this.MHZ);
-      const factor = deltaCpuMillis / delta;
-      if (!this.sampleIndex) {
-        this.samples.fill(factor);
+      if (delta > 0) {
+        const deltaCycles = this.cpu.cycles - this.prevCycles;
+        const deltaCpuMillis = 1000 * (deltaCycles / this.MHZ);
+        const factor = deltaCpuMillis / delta;
+        if (!this.sampleIndex) {
+          this.samples.fill(factor);
+        }
+        this.samples[this.sampleIndex++ % this.samples.length] = factor;
       }
-      this.samples[this.sampleIndex++ % this.samples.length] = factor;
     }
     this.prevCycles = this.cpu.cycles;
     this.prevTime = performance.now();
