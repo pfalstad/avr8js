@@ -32,7 +32,7 @@ export class AVRRunner {
   readonly workUnitCycles = 500000;
   readonly taskScheduler = new MicroTaskScheduler();
 
-  constructor(hex: string) {
+  constructor(hex: string, sim_) {
     loadHex(hex, new Uint8Array(this.program.buffer));
     this.cpu = new CPU(this.program);
     this.timer0 = new AVRTimer(this.cpu, timer0Config);
@@ -42,19 +42,33 @@ export class AVRRunner {
     this.portC = new AVRIOPort(this.cpu, portCConfig);
     this.portD = new AVRIOPort(this.cpu, portDConfig);
     this.usart = new AVRUSART(this.cpu, usart0Config, this.speed);
+
     this.taskScheduler.start();
+    this.sim = sim_;
+    this.prevTime = this.sim.getTime();
   }
 
   // CPU main loop
   execute(callback: (cpu: CPU) => void) {
-    const cyclesToRun = this.cpu.cycles + this.workUnitCycles;
+    var timeDiff = this.sim.getTime() - this.prevTime;      //Added by Mark Megarry
+    var cyclesToRun = this.cpu.cycles + timeDiff*this.speed; //Added by Mark Megarry
+    this.getPinStates();
     while (this.cpu.cycles < cyclesToRun) {
       avrInstruction(this.cpu);
       this.cpu.tick();
     }
+    this.prevTime = this.sim.getTime();
 
     callback(this.cpu);
     this.taskScheduler.postTask(() => this.execute(callback));
+  }
+
+  getPinStates() {
+    var i;
+    for (i = 0; i != 8; i++)
+      this.sim.setExtVoltage("pin " + i, this.portD.pinState(i) ? 5 : 0);
+    for (i = 0; i != 6; i++)
+      this.sim.setExtVoltage("pin " + (i+8), this.portB.pinState(i) ? 5 : 0);
   }
 
   stop() {

@@ -43,6 +43,7 @@ window.require(['vs/editor/editor.main'], () => {
 // Set up LEDs
 const led13 = document.querySelector<LEDElement>('wokwi-led[color=green]');
 const led12 = document.querySelector<LEDElement>('wokwi-led[color=red]');
+var sim;
 
 // Set up toolbar
 let runner: AVRRunner;
@@ -59,13 +60,20 @@ const compilerOutputText = document.querySelector('#compiler-output-text');
 const serialOutputText = document.querySelector('#serial-output-text');
 
 function executeProgram(hex: string) {
-  runner = new AVRRunner(hex);
   const MHZ = 16000000;
+
+  // get iframe the simulator is running in.  Must have same origin as this file!
+  var iframe = document.getElementById("circuitFrame");
+  sim = iframe.contentWindow.CircuitJS1;
+
+  runner = new AVRRunner(hex, sim);
 
   // Hook to PORTB register
   runner.portB.addListener(() => {
     led12.value = runner.portB.pinState(4) === PinState.High;
     led13.value = runner.portB.pinState(5) === PinState.High;
+    sim.setExtVoltage("led12", led12.value ? 5 : 0);
+    sim.setExtVoltage("led13", led13.value ? 5 : 0);
   });
   runner.usart.onByteTransmit = (value) => {
     serialOutputText.textContent += String.fromCharCode(value);
@@ -76,6 +84,7 @@ function executeProgram(hex: string) {
     const speed = (cpuPerf.update() * 100).toFixed(0);
     statusLabel.textContent = `Simulation time: ${time} (${speed}%)`;
   });
+  sim.setSimRunning(true);
 }
 
 async function compileAndRun() {
@@ -121,9 +130,12 @@ function stopCode() {
     runner.stop();
     runner = null;
   }
+  if (sim)
+    sim.setSimRunning(false);
 }
 
 function setBlinkSnippet() {
   editor.setValue(BLINK_CODE);
   EditorHistoryUtil.storeSnippet(editor.getValue());
 }
+
